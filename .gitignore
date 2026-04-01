@@ -1,0 +1,21 @@
+# Unity generated files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Never commit these
+*.csproj
+*.sln
+*.suo
+*.user
+*.unityproj
+*.pidb
+*.booproj
+
+# OS generated
+.DS_Store
+Thumbs.db
