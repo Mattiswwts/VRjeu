@@ -16,6 +16,10 @@
 *.pidb
 *.booproj
 
+# IDE
+.vs/
+.idea/
+
 # OS generated
 .DS_Store
 Thumbs.db
