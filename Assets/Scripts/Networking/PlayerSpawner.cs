@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using Ubiq.Messaging;
 using Ubiq.Spawning;
@@ -23,6 +24,9 @@ namespace ActionGame.Networking
         [Header("Points de spawn")]
         [SerializeField] private Transform m_actorSpawnPoint;
         [SerializeField] private Transform m_directorSpawnPoint;
+
+        [Header("Événements")]
+        public UnityEvent<bool> OnRoleSelected; // true = Acteur, false = Réalisateur
 
         private NetworkSpawnManager m_spawnManager;
         private bool m_roleSelected = false;
@@ -74,7 +78,7 @@ namespace ActionGame.Networking
 
             m_roleSelected = true;
             m_showUI = false;
-
+            OnRoleSelected?.Invoke(isActor);
             Debug.Log($"[PlayerSpawner] Rôle choisi : {(isActor ? "ACTEUR" : "RÉALISATEUR")}");
         }
 

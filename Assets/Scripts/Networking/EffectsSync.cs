@@ -25,6 +25,13 @@ namespace ActionGame.Networking
         private void Start()
         {
             m_context = NetworkScene.Register(this);
+
+            // Branche automatiquement tous les boutons de la scène sans passer par l'Inspector
+            foreach (var btn in FindObjectsOfType<ActionGame.Objects.InteractableButton>())
+            {
+                btn.OnPressed.AddListener(SendEffect);
+                Debug.Log($"[EffectsSync] Bouton auto-connecté : {btn.effectName}");
+            }
         }
 
         /// <summary>
@@ -34,8 +41,17 @@ namespace ActionGame.Networking
         {
             Debug.Log($"[EffectsSync] Envoi effet : {effectName}");
             m_context.SendJson(new EffectMessage { effectName = effectName });
+            OnEffectReceived?.Invoke(effectName);
+        }
 
-            // Applique aussi localement
+        /// <summary>
+        /// Appelé par Lever.OnToggled — envoie le jour/nuit à tous via Ubiq.
+        /// </summary>
+        public void SendDayNight(bool isDay)
+        {
+            string effectName = isDay ? "DayNight_On" : "DayNight_Off";
+            Debug.Log($"[EffectsSync] Envoi : {effectName}");
+            m_context.SendJson(new EffectMessage { effectName = effectName });
             OnEffectReceived?.Invoke(effectName);
         }
 

@@ -30,8 +30,11 @@ namespace ActionGame.Player
             if (Physics.Raycast(ray, out RaycastHit hit, m_interactRange))
             {
                 var button = hit.collider.GetComponent<InteractableButton>();
-                if (button != null)
-                    button.Press();
+                if (button != null) { button.Press(); return; }
+
+                var lever = hit.collider.GetComponent<Lever>()
+                         ?? hit.collider.GetComponentInParent<Lever>();
+                if (lever != null) lever.Toggle();
             }
         }
     }

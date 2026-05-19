@@ -25,6 +25,10 @@ namespace ActionGame.Player
         [Tooltip("Déclenché quand l'acteur effectue une action (envoyé au SyncChecker)")]
         public UnityEvent<string> OnActionExecuted;
 
+        public string HeldItem { get; private set; } = "";
+        public void PickUp(string itemName) => HeldItem = itemName;
+        public void DropHeld()             => HeldItem = "";
+
         private CharacterController m_charController;
         private Camera m_camera;
         private float m_cameraPitch = 0f; // rotation verticale de la caméra
@@ -95,9 +99,22 @@ namespace ActionGame.Player
 
             if (Physics.Raycast(ray, out RaycastHit hit, m_interactRange, mask))
             {
-                string objectName = hit.collider.gameObject.name;
-                Debug.Log($"[ActorController] Action exécutée sur : {objectName}");
-                OnActionExecuted?.Invoke(objectName);
+                // Cherche IInteractable sur l'objet touché ou ses parents
+                var interactable = hit.collider.GetComponent<ActionGame.Objects.IInteractable>()
+                                ?? hit.collider.GetComponentInParent<ActionGame.Objects.IInteractable>()
+                                ?? hit.collider.GetComponentInChildren<ActionGame.Objects.IInteractable>();
+
+                if (interactable != null)
+                {
+                    interactable.Interact(this);
+                }
+                else
+                {
+                    // Fallback : envoie le nom de la racine au ScenarioManager
+                    string objectName = hit.collider.gameObject.name;
+                    Debug.Log($"[ActorController] Action exécutée sur : {objectName}");
+                    OnActionExecuted?.Invoke(objectName);
+                }
             }
             else
             {

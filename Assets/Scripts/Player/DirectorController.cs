@@ -70,6 +70,7 @@ namespace ActionGame.Player
             if (kb.digit1Key.wasPressedThisFrame) TriggerEffect("Light");
             if (kb.digit2Key.wasPressedThisFrame) TriggerEffect("Sound");
             if (kb.digit3Key.wasPressedThisFrame) TriggerEffect("Weather");
+            if (kb.digit4Key.wasPressedThisFrame) TriggerEffect("Music");
         }
 
         private void TriggerEffect(string effectName)
