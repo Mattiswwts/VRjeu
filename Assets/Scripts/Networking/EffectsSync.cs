@@ -27,7 +27,7 @@ namespace ActionGame.Networking
             m_context = NetworkScene.Register(this);
 
             // Branche automatiquement tous les boutons de la scène sans passer par l'Inspector
-            foreach (var btn in FindObjectsOfType<ActionGame.Objects.InteractableButton>())
+            foreach (var btn in FindObjectsByType<ActionGame.Objects.InteractableButton>(FindObjectsSortMode.None))
             {
                 btn.OnPressed.AddListener(SendEffect);
                 Debug.Log($"[EffectsSync] Bouton auto-connecté : {btn.effectName}");

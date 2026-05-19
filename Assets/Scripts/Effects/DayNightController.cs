@@ -34,7 +34,7 @@ namespace ActionGame.Effects
         private void Start()
         {
             if (m_sunLight == null)
-                m_sunLight = FindObjectOfType<Light>();
+                m_sunLight = FindFirstObjectByType<Light>();
 
             ApplyImmediate(isDay: true);
         }

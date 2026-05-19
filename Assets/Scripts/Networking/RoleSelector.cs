@@ -28,12 +28,12 @@ namespace ActionGame.Networking
             // Auto-trouve les joueurs par composant si les références Inspector sont cassées
             if (m_actorPlayer == null)
             {
-                var ctrl = FindObjectOfType<ActorController>();
+                var ctrl = FindFirstObjectByType<ActorController>();
                 if (ctrl != null) m_actorPlayer = ctrl.gameObject;
             }
             if (m_directorPlayer == null)
             {
-                var ctrl = FindObjectOfType<DirectorController>();
+                var ctrl = FindFirstObjectByType<DirectorController>();
                 if (ctrl != null) m_directorPlayer = ctrl.gameObject;
             }
 

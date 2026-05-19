@@ -19,7 +19,7 @@ namespace ActionGame.Objects
 
         private void Start()
         {
-            m_scenarioManager = FindObjectOfType<ScenarioManager>();
+            m_scenarioManager = FindFirstObjectByType<ScenarioManager>();
         }
 
         public void Interact(ActorController actor)

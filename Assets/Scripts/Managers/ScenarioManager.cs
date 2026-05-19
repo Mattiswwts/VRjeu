@@ -21,10 +21,10 @@ namespace ActionGame.GameLogic
         [Header("Scénario — Une journée banale")]
         [SerializeField] private ScenarioStep[] m_steps = new ScenarioStep[]
         {
-            // 0 — Réveil (intro, avance automatiquement)
+            // 0 — Réveil
             new ScenarioStep {
                 actorInstruction    = "Le personnage se réveille doucement...",
-                directorInstruction = "Action !",
+                directorInstruction = "ACTION !\nUne journée banale commence.",
                 expectedActorAction    = "",
                 expectedDirectorEffect = "",
                 requiresSync = false
@@ -32,7 +32,7 @@ namespace ActionGame.GameLogic
             // 1 — TV
             new ScenarioStep {
                 actorInstruction    = "Le personnage s'approche de la TV et l'allume.",
-                directorInstruction = "Le personnage allume la TV — active le son des infos.",
+                directorInstruction = "Il allume la TV...\nLes infos du matin. Lance le son.",
                 expectedActorAction    = "TV",
                 expectedDirectorEffect = "Sound",
                 requiresSync = true
@@ -40,55 +40,55 @@ namespace ActionGame.GameLogic
             // 2 — Note
             new ScenarioStep {
                 actorInstruction    = "Le personnage s'approche du bureau et lit la feuille.",
-                directorInstruction = "Il lit un mot : \"Café dehors à 11h\" — règle l'heure sur 11h !",
+                directorInstruction = "Il lit un mot laissé sur le bureau.\n\"Café dehors à 11h\" — il est temps. Règle l'heure.",
                 expectedActorAction    = "feuille",
                 expectedDirectorEffect = "DayNight_On",
                 requiresSync = false
             },
             // 3 — Jardin
             new ScenarioStep {
-                actorInstruction    = "Le personnage sort dans le jardin.",
-                directorInstruction = "Observe...",
+                actorInstruction    = "Le personnage sort prendre l'air.",
+                directorInstruction = "Il sort dans le jardin.\nObserve. Laisse-le respirer.",
                 expectedActorAction    = "doorM",
                 expectedDirectorEffect = "",
                 requiresSync = false
             },
             // 4 — Café
             new ScenarioStep {
-                actorInstruction    = "Le personnage savoure son café.",
-                directorInstruction = "Laisse-le profiter du moment...",
+                actorInstruction    = "Le personnage savoure son café en silence.",
+                directorInstruction = "Il boit son café.\nUn moment de calme. Profites-en.",
                 expectedActorAction    = "tasse café",
                 expectedDirectorEffect = "",
                 requiresSync = false
             },
             // 5 — Boîte à musique
             new ScenarioStep {
-                actorInstruction    = "Le personnage ramasse la boîte à musique près de l'arbre.",
-                directorInstruction = "Il trouve la boîte à musique — déclenche la mélodie !",
+                actorInstruction    = "Le personnage remarque quelque chose près de l'arbre...",
+                directorInstruction = "Il découvre la boîte à musique.\nQuand il la prend — déclenche la mélodie.",
                 expectedActorAction    = "musicbox",
                 expectedDirectorEffect = "Music",
                 requiresSync = true
             },
             // 6 — Pluie + retour maison
             new ScenarioStep {
-                actorInstruction    = "Il commence à pleuvoir — le personnage rentre vite !",
-                directorInstruction = "Déclenche la pluie pour le faire rentrer.",
+                actorInstruction    = "Des gouttes commencent à tomber... le personnage rentre.",
+                directorInstruction = "Les nuages arrivent.\nDéclenche la pluie — fais-le rentrer.",
                 expectedActorAction    = "doorJ",
                 expectedDirectorEffect = "Weather",
                 requiresSync = false
             },
             // 7 — Interrupteur
             new ScenarioStep {
-                actorInstruction    = "Le personnage essaie d'allumer la lumière... elle ne marche pas.",
-                directorInstruction = "L'interrupteur est cassé — allume la lumière depuis la régie !",
+                actorInstruction    = "Le personnage essaie d'allumer la lumière...",
+                directorInstruction = "L'interrupteur est cassé, il ne le sait pas encore.\nAllume la lumière depuis la régie.",
                 expectedActorAction    = "interrupteur",
                 expectedDirectorEffect = "Light",
                 requiresSync = true
             },
             // 8 — Dodo
             new ScenarioStep {
-                actorInstruction    = "Le personnage va se coucher. Bonne nuit.",
-                directorInstruction = "Il s'endort — passe en mode nuit.",
+                actorInstruction    = "Une journée ordinaire se termine. Le personnage va se coucher.",
+                directorInstruction = "Il s'endort.\nFin de journée — passe en mode nuit.",
                 expectedActorAction    = "lit",
                 expectedDirectorEffect = "DayNight_Off",
                 requiresSync = true
@@ -120,10 +120,10 @@ namespace ActionGame.GameLogic
         private void Start()
         {
             // Auto-connexions sans Inspector
-            var actor = FindObjectOfType<ActionGame.Player.ActorController>();
+            var actor = FindFirstObjectByType<ActionGame.Player.ActorController>();
             if (actor != null) actor.OnActionExecuted.AddListener(RegisterActorAction);
 
-            var effectsSync = FindObjectOfType<ActionGame.Networking.EffectsSync>();
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
             if (effectsSync != null) effectsSync.OnEffectReceived.AddListener(RegisterDirectorEffect);
 
             ShowCurrentStep();

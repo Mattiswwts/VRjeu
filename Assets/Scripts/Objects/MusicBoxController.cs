@@ -39,11 +39,11 @@ namespace ActionGame.Objects
 
         private void Start()
         {
-            var effectsSync = FindObjectOfType<ActionGame.Networking.EffectsSync>();
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
             if (effectsSync != null)
                 effectsSync.OnEffectReceived.AddListener(TriggerMusicBox);
 
-            m_actor = FindObjectOfType<ActorController>();
+            m_actor = FindFirstObjectByType<ActorController>();
             if (m_actor != null)
                 m_actor.OnActionExecuted.AddListener(OnActorAction);
         }
@@ -70,10 +70,10 @@ namespace ActionGame.Objects
             }
 
             m_cdInserted = true;
-            var cd = FindObjectOfType<HoldableItem>();
+            var cd = FindFirstObjectByType<HoldableItem>();
             cd?.Place();
             Debug.Log("[MusicBoxController] CD inséré !");
-            FindObjectOfType<ActionGame.GameLogic.ScenarioManager>()?.RegisterActorAction(gameObject.name);
+            FindFirstObjectByType<ActionGame.GameLogic.ScenarioManager>()?.RegisterActorAction(gameObject.name);
         }
 
         private void Update()
@@ -85,7 +85,6 @@ namespace ActionGame.Objects
         // Brancher sur EffectsSync.OnEffectReceived
         public void TriggerMusicBox(string effectName)
         {
-            Debug.Log($"[MusicBoxController] TriggerMusicBox appelé avec : '{effectName}'");
             if (!string.Equals(effectName, "Music", System.StringComparison.OrdinalIgnoreCase)) return;
             m_isPlaying = true;
             if (m_audioSource != null)

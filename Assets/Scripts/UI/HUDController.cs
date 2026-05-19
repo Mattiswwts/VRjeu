@@ -48,11 +48,30 @@ namespace ActionGame.UI
 
         private void Start()
         {
-            if (m_scenarioManager != null)
-                m_totalSteps = m_scenarioManager.StepCount;
+            if (m_scenarioManager == null)
+                m_scenarioManager = FindFirstObjectByType<ActionGame.GameLogic.ScenarioManager>();
 
-            // Cache le feedback au démarrage
+            if (m_scenarioManager != null)
+            {
+                m_totalSteps = m_scenarioManager.StepCount;
+                m_scenarioManager.OnDirectorInstructionChanged.AddListener(SetDirectorInstruction);
+                m_scenarioManager.OnStepIndexChanged.AddListener(UpdateStepCounter);
+                m_scenarioManager.OnSyncSuccess.AddListener(ShowSuccess);
+                m_scenarioManager.OnSyncFail.AddListener(ShowFail);
+            }
+
             SetFeedbackVisible(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (m_scenarioManager != null)
+            {
+                m_scenarioManager.OnDirectorInstructionChanged.RemoveListener(SetDirectorInstruction);
+                m_scenarioManager.OnStepIndexChanged.RemoveListener(UpdateStepCounter);
+                m_scenarioManager.OnSyncSuccess.RemoveListener(ShowSuccess);
+                m_scenarioManager.OnSyncFail.RemoveListener(ShowFail);
+            }
         }
 
         // ─── Instruction Acteur ───────────────────────────────────────────────

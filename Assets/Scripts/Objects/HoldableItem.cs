@@ -20,7 +20,7 @@ namespace ActionGame.Objects
 
         private void Start()
         {
-            m_actor = FindObjectOfType<ActorController>();
+            m_actor = FindFirstObjectByType<ActorController>();
             if (m_actor != null)
                 m_actorCam = m_actor.GetComponentInChildren<Camera>();
         }
