@@ -119,10 +119,18 @@ namespace ActionGame.GameLogic
 
         private void Start()
         {
-            // Auto-connexions sans Inspector
-            var actor = FindFirstObjectByType<ActionGame.Player.ActorController>();
-            if (actor != null) actor.OnActionExecuted.AddListener(RegisterActorAction);
+            // Actions Acteur via réseau (fonctionne sur les 2 clients)
+            var actorSync = FindFirstObjectByType<ActionGame.Networking.ActorActionsSync>();
+            if (actorSync != null)
+                actorSync.OnActionReceived.AddListener(RegisterActorAction);
+            else
+            {
+                // Fallback solo sans ActorActionsSync dans la scène
+                var actor = FindFirstObjectByType<ActionGame.Player.ActorController>();
+                if (actor != null) actor.OnActionExecuted.AddListener(RegisterActorAction);
+            }
 
+            // Effets Réalisateur via réseau
             var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
             if (effectsSync != null) effectsSync.OnEffectReceived.AddListener(RegisterDirectorEffect);
 

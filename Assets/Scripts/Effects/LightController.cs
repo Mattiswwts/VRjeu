@@ -16,7 +16,13 @@ namespace ActionGame.Effects
 
             var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
             if (effectsSync != null)
+            {
+                // RemoveListener avant AddListener = garantit une seule souscription
+                // (évite le double-fire si aussi câblé dans l'Inspector)
+                effectsSync.OnEffectReceived.RemoveListener(TriggerLight);
                 effectsSync.OnEffectReceived.AddListener(TriggerLight);
+                Debug.Log("[LightController] ✅ Connecté à EffectsSync");
+            }
         }
 
         public void TriggerLight(string effectName)

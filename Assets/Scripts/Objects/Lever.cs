@@ -26,6 +26,15 @@ namespace ActionGame.Objects
         private void Start()
         {
             m_targetAngle = m_offAngle;
+
+            // Auto-connexion : levier → EffectsSync.SendDayNight (sync réseau)
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
+            if (effectsSync != null)
+            {
+                OnToggled.RemoveListener(effectsSync.SendDayNight);
+                OnToggled.AddListener(effectsSync.SendDayNight);
+                Debug.Log("[Lever] ✅ Connecté à EffectsSync.SendDayNight");
+            }
         }
 
         private void Update()

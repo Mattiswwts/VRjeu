@@ -37,6 +37,14 @@ namespace ActionGame.Effects
                 m_sunLight = FindFirstObjectByType<Light>();
 
             ApplyImmediate(isDay: true);
+
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
+            if (effectsSync != null)
+            {
+                effectsSync.OnEffectReceived.RemoveListener(TriggerDayNight);
+                effectsSync.OnEffectReceived.AddListener(TriggerDayNight);
+                Debug.Log("[DayNightController] ✅ Connecté à EffectsSync");
+            }
         }
 
         private void Update()

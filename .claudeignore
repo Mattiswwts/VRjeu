@@ -1,0 +1,33 @@
+# Unity generated
+Library/
+Temp/
+Logs/
+obj/
+Build/
+Builds/
+
+# Unity metadata (un .meta par fichier, inutile)
+*.meta
+
+# Projet C# auto-généré par Unity
+*.csproj
+*.sln
+*.vsconfig
+
+# Packages Unity (pas du code projet)
+Packages/
+UserSettings/
+
+# Fichiers binaires Unity (illisibles)
+*.unity
+*.prefab
+*.asset
+*.mat
+*.png
+*.jpg
+*.wav
+*.mp3
+*.ogg
+*.fbx
+*.anim
+*.controller

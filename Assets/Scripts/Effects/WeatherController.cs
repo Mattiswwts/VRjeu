@@ -16,6 +16,14 @@ namespace ActionGame.Effects
         private void Start()
         {
             SetRain(false);
+
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
+            if (effectsSync != null)
+            {
+                effectsSync.OnEffectReceived.RemoveListener(TriggerWeather);
+                effectsSync.OnEffectReceived.AddListener(TriggerWeather);
+                Debug.Log("[WeatherController] ✅ Connecté à EffectsSync");
+            }
         }
 
         /// <summary>Appelé par EffectsSync via OnEffectReceived.</summary>
