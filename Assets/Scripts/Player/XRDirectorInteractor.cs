@@ -15,14 +15,14 @@ namespace ActionGame.Player
     ///   1. Sur XROrigin du Réalisateur → RightHand Controller → ajoute ce script
     ///   2. Les boutons et leviers doivent avoir XRSimpleInteractable
     /// </summary>
-    [RequireComponent(typeof(XRBaseInteractor))]
+    [RequireComponent(typeof(UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor))]
     public class XRDirectorInteractor : MonoBehaviour
     {
-        private XRBaseInteractor m_interactor;
+        private UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor m_interactor;
 
         private void Awake()
         {
-            m_interactor = GetComponent<XRBaseInteractor>();
+            m_interactor = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>();
         }
 
         private void OnEnable()

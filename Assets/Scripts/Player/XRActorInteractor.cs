@@ -15,15 +15,15 @@ namespace ActionGame.Player
     ///   1. Sur XROrigin de l'Acteur → RightHand Controller → ajoute ce script
     ///   2. L'objet doit aussi avoir XRSimpleInteractable pour être détectable par XRI
     /// </summary>
-    [RequireComponent(typeof(XRBaseInteractor))]
+    [RequireComponent(typeof(UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor))]
     public class XRActorInteractor : MonoBehaviour
     {
-        private XRBaseInteractor m_interactor;
+        private UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor m_interactor;
         private ActorControllerXR m_actor;
 
         private void Awake()
         {
-            m_interactor = GetComponent<XRBaseInteractor>();
+            m_interactor = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor>();
             // Cherche ActorControllerXR sur le parent (XROrigin)
             m_actor = GetComponentInParent<ActorControllerXR>();
             if (m_actor == null)

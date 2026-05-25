@@ -15,14 +15,14 @@ namespace ActionGame.Objects
     ///   2. Add Component → XRPickupHelper
     ///   3. Sur XRGrabInteractable : Throw On Detach = false (optionnel)
     /// </summary>
-    [RequireComponent(typeof(XRBaseInteractable))]
+    [RequireComponent(typeof(UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable))]
     public class XRPickupHelper : MonoBehaviour
     {
-        private XRBaseInteractable m_interactable;
+        private UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable m_interactable;
 
         private void Awake()
         {
-            m_interactable = GetComponent<XRBaseInteractable>();
+            m_interactable = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRBaseInteractable>();
         }
 
         private void OnEnable()
