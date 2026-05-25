@@ -1,264 +1,211 @@
-# Guide Migration VR — Action! (Meta Quest 2/3)
+# Guide VR + Avatars Ubiq — Action! (Meta Quest)
 
-## Vue d'ensemble
-
-Ce guide transforme le prototype desktop en jeu VR pour 2x Meta Quest.
-Les scripts VR sont déjà écrits — tu dois juste configurer Unity Editor.
+> Tous les scripts sont déjà écrits. Ce guide = clics dans Unity Editor uniquement.
+> Temps estimé : 45 min.
 
 ---
 
-## ÉTAPE 1 — Importer les packages XRI (déjà dans manifest.json)
+## VUE D'ENSEMBLE
 
-À l'ouverture du projet, Unity va télécharger automatiquement :
-- XR Interaction Toolkit 3.0.7
-- OpenXR Plugin 1.13.0
-- XR Management 4.5.0
-
-**Si Unity affiche un popup "TMP Importer"** → clique "Import TMP Essentials"
-**Si Unity affiche "XRI Default Input Actions"** → clique "Import" pour avoir les contrôles de base
-
-⚠️ Si tu as des erreurs de version :
-- Window → Package Manager → cherche "XR Interaction Toolkit" → mets à jour
-
----
-
-## ÉTAPE 2 — Configurer OpenXR pour Meta Quest
-
-1. **Edit → Project Settings → XR Plug-in Management**
-2. Onglet **Android** (icône robot) → coche **OpenXR**
-3. Onglet **PC** → coche aussi **OpenXR** (pour tester avec Link)
-4. Clique sur l'icône ⚠️ jaune si elle apparaît → "Fix All"
-
-5. Toujours dans XR Plug-in Management → clique **OpenXR** (sous Android)
-6. Dans **Interaction Profiles** → clique **+** → ajoute :
-   - **Meta Quest Touch Pro Controller Profile**
-   - (ou "Oculus Touch Controller Profile" si le premier n'est pas là)
-7. Dans **OpenXR Feature Groups** → active **Meta Quest Support**
+```
+Scene
+├── GameManager          ← RoleSelector + VRRoleMenu (ajouter)
+├── NetworkScene (Ubiq)
+│   └── AvatarManager   ← à ajouter ici
+├── Player_Actor         (desktop, déjà là — laisser)
+├── Player_Director      (desktop, déjà là — laisser)
+├── Player_Actor_XR      (à créer — XROrigin Acteur)
+└── Player_Director_XR   (à créer — XROrigin Réalisateur)
+```
 
 ---
 
-## ÉTAPE 3 — Remplacer Player_Actor par un XR Rig
+## ÉTAPE 1 — Créer le XR Rig Acteur
 
-### Supprimer l'ancien Player_Actor
-1. Dans la Hierarchy → clique sur **Player_Actor**
-2. Note sa position (Transform) pour la réutiliser
-3. **Ne supprime pas encore** — d'abord crée le nouveau
-
-### Créer le XR Rig Acteur
-1. Dans la Hierarchy → clic droit → **XR → XR Origin (VR)**
-   - Unity crée automatiquement : XR Origin + Camera Offset + Main Camera + Left/Right Controller
-2. Renomme-le `Player_Actor_XR`
-3. Replace-le à la même position que l'ancien Player_Actor
-
-### Ajouter les composants gameplay
-4. Clique sur **Player_Actor_XR** (le parent)
-5. **Add Component → ActorControllerXR**
-6. **Add Component → Networked Player Sync** (s'il existe dans ta scène)
-   - Vérifie que PlayerSync / NetworkedPlayerSync est aussi là
-
-### Configurer la téléportation (locomotion Acteur)
-7. Sur **Player_Actor_XR** → **Add Component → Locomotion System**
-8. Sur **Player_Actor_XR** → **Add Component → Teleportation Provider**
-   - Dans Locomotion System → assigne le **Locomotion System** que tu viens d'ajouter
-9. Sur **Player_Actor_XR** → **Add Component → Snap Turn Provider (Action-based)**
-
-### Configurer le Ray Interactor Acteur (main droite)
-10. Déplie **Player_Actor_XR → Camera Offset → Right Controller**
-11. Clique sur **Right Controller**
-12. Il devrait déjà avoir **XR Ray Interactor** — sinon Add Component → XR Ray Interactor
-13. **Add Component → XRActorInteractor** (notre script)
-
-### Supprimer l'ancien Player_Actor
-14. Maintenant supprime l'ancien **Player_Actor** de la Hierarchy
-
----
-
-## ÉTAPE 4 — Remplacer Player_Director par un XR Rig
-
-### Créer le XR Rig Réalisateur
+### 1a. Créer l'XR Rig
 1. Hierarchy → clic droit → **XR → XR Origin (VR)**
-2. Renomme-le `Player_Director_XR`
-3. Place-le dans la cabine réalisateur (même position que l'ancien Player_Director)
+2. Renommer : `Player_Actor_XR`
+3. Positionner au même endroit que `Player_Actor` (le point de départ acteur)
 
-### Ajouter les composants
-4. Sur **Player_Director_XR** → **Add Component → DirectorControllerXR**
-5. Sur **Player_Director_XR** → **Add Component → Locomotion System**
-6. Sur **Player_Director_XR** → **Add Component → Snap Turn Provider (Action-based)**
-   - Le réalisateur ne se déplace PAS, il tourne juste sur lui-même
+### 1b. Composants sur Player_Actor_XR (racine)
+Cliquer sur `Player_Actor_XR` → Add Component :
+- **ActorControllerXR** (notre script)
+- **Player Sync** (notre script Ubiq) — décocher "Is Local" pour l'instant
+- **Head And Hands Avatar Input XRI** *(Ubiq.XRI)* — décocher **enabled** pour l'instant
+  - Laisser les champs vides (auto-trouvés au runtime)
 
-### Configurer le Ray Interactor Réalisateur
-7. Déplie **Player_Director_XR → Camera Offset → Right Controller**
-8. Sur **Right Controller** → **Add Component → XRDirectorInteractor** (notre script)
+### 1c. Locomotion acteur (téléportation)
+Toujours sur `Player_Actor_XR` → Add Component :
+- **Locomotion System**
+- **Teleportation Provider**
+  - Dans le champ **Locomotion System** → glisse le Locomotion System
+- **Snap Turn Provider (Action-based)**
 
-### Supprimer l'ancien Player_Director
-9. Supprime l'ancien **Player_Director**
+### 1d. Interacteur main droite
+1. Déplie `Player_Actor_XR → Camera Offset → Right Controller`
+2. Sur `Right Controller` → Add Component → **XR Actor Interactor** (notre script)
 
----
+### 1e. Sol téléportable
+1. Clique sur le sol de la scène acteur (`Floor test` ou similaire)
+2. Add Component → **Teleportation Area**
+*(Le joueur peut alors se téléporter en appuyant sur le joystick gauche)*
 
-## ÉTAPE 5 — Configurer la téléportation dans la scène
-
-L'acteur se téléporte pour se déplacer. Il faut marquer les zones où il peut aller.
-
-1. Clique sur le sol de ta scène principale (**Floor test** ou similaire)
-2. **Add Component → Teleportation Area**
-3. Ça c'est tout — le raycast de la manette gauche affichera une courbe
-   et l'acteur pourra se téléporter en appuyant sur le joystick gauche
-
-⚠️ Si la téléportation ne marche pas : vérifie que le sol a un **Collider** (Box Collider ou Mesh Collider)
-
----
-
-## ÉTAPE 6 — Rendre les boutons et leviers cliquables en VR
-
-Les boutons du réalisateur et les leviers doivent être "sélectionnables" par le ray interactor.
-
-**Pour chaque InteractableButton dans la cabine :**
-1. Clique sur le GameObject du bouton
-2. **Add Component → XR Simple Interactable**
-3. C'est tout — XRDirectorInteractor détecte et appelle Press() automatiquement
-
-**Pour chaque Lever :**
-1. Clique sur le GameObject du levier
-2. **Add Component → XR Simple Interactable**
-3. C'est tout — XRDirectorInteractor détecte et appelle Toggle() automatiquement
+### 1f. Désactiver Player_Actor_XR au départ
+- Dans la Hierarchy, clique sur `Player_Actor_XR`
+- **Décoche la case** à gauche du nom (SetActive false)
 
 ---
 
-## ÉTAPE 7 — Rendre les objets ramassables en VR
+## ÉTAPE 2 — Créer le XR Rig Réalisateur
 
-Pour chaque objet que l'acteur doit prendre (tasse café, CD, musicbox) :
+### 2a. Créer l'XR Rig
+1. Hierarchy → clic droit → **XR → XR Origin (VR)**
+2. Renommer : `Player_Director_XR`
+3. Positionner dans la cabine réalisateur (même endroit que `Player_Director`)
 
+### 2b. Composants sur Player_Director_XR (racine)
+- **DirectorControllerXR** (notre script)
+- **Player Sync** (notre script Ubiq) — décocher "Is Local"
+- **Head And Hands Avatar Input XRI** *(Ubiq.XRI)* — décocher **enabled**
+- **Snap Turn Provider (Action-based)** *(le réalisateur tourne sur place, pas de téléport)*
+
+### 2c. Interacteur main droite
+1. Déplie `Player_Director_XR → Camera Offset → Right Controller`
+2. Sur `Right Controller` → Add Component → **XR Director Interactor** (notre script)
+
+### 2d. Désactiver Player_Director_XR au départ
+- Décoche la case de `Player_Director_XR` (SetActive false)
+
+---
+
+## ÉTAPE 3 — Avatars Ubiq
+
+### 3a. AvatarManager sur NetworkScene
+1. Dans la Hierarchy → trouve **NetworkScene** (le parent Ubiq)
+2. Clique dessus → Add Component → **Avatar Manager** *(Ubiq.Avatars)*
+3. Champ **Avatar Prefab** → dans le Project panel, cherche `Ubiq Floating Avatar`
+   - Chemin : `Packages/Ubiq/Runtime/ExampleAvatars/Floating/Ubiq Floating Avatar`
+   - Glisse-le dans le champ
+
+### 3b. Vérifier le define symbol
+*Normalement automatique avec XRI 3.0.7, mais si les avatars ne bougent pas :*
+- **Edit → Project Settings → Player → Other Settings → Scripting Define Symbols**
+- Ajouter : `XRI_3_0_7_OR_NEWER`
+
+### 3c. Résultat attendu
+- Chaque joueur voit l'avatar de l'autre (tête + 2 mains flottantes) bouger en temps réel
+- L'avatar local est invisible pour soi-même (normal, géré par `AvatarLocalRemoteSwitcher`)
+
+---
+
+## ÉTAPE 4 — Brancher RoleSelector
+
+1. Dans la Hierarchy → clique sur **GameManager**
+2. Sur le composant **Role Selector** → remplir les 4 champs :
+   - **Actor Player** → glisse `Player_Actor`
+   - **Director Player** → glisse `Player_Director`
+   - **Actor Player XR** → glisse `Player_Actor_XR`
+   - **Director Player XR** → glisse `Player_Director_XR`
+
+3. Toujours sur GameManager → Add Component → **VR Role Menu** (notre script)
+   - Laisse les valeurs par défaut (distance=2, height=0)
+
+*En VR : 2 cubes flottants (vert=Acteur, bleu=Réalisateur) apparaissent au démarrage.
+En desktop : F1/F2 comme avant.*
+
+---
+
+## ÉTAPE 5 — Boutons et leviers VR
+
+Pour chaque **InteractableButton** (lumière, son, météo, musique) dans la cabine :
+1. Clique sur le bouton → Add Component → **XR Simple Interactable**
+
+Pour chaque **Lever** (jour/nuit) :
+1. Clique sur le levier → Add Component → **XR Simple Interactable**
+
+*XRDirectorInteractor détecte automatiquement et appelle Press() ou Toggle().*
+
+---
+
+## ÉTAPE 6 — Objets ramassables VR
+
+Pour **tasse café** et **CD** :
 1. Clique sur l'objet
-2. **Add Component → XR Grab Interactable**
-3. **Add Component → XR Pickup Helper** (notre script — envoie l'action réseau)
-4. **Add Component → Network Object State** (notre script — synchro la disparition chez le réalisateur)
-5. Sur XR Grab Interactable → décoche **Throw On Detach** (pour éviter que l'objet vole)
-6. Assure-toi que l'objet a un **Rigidbody** (XR Grab Interactable en ajoute un automatiquement)
-
-⚠️ Sans **Network Object State**, l'objet disparaît côté acteur mais reste visible côté réalisateur !
+2. Add Component → **XR Grab Interactable**
+   - Décoche **Throw On Detach**
+3. Add Component → **XR Pickup Helper** (notre script)
+4. Add Component → **Network Object State** (notre script — sync visibilité)
 
 ---
 
-## ÉTAPE 8 — HUD Réalisateur en World Space (déjà fait)
+## ÉTAPE 7 — Voice Chat Ubiq
 
-L'écran réalisateur (`ecran_réalisateur`) est déjà en World Space Canvas — ça marche en VR directement.
+La voix est **déjà incluse** dans le prefab NetworkScene Ubiq (VoipPeer + VoipSpeakerOutput).
+Rien à faire si tu utilises le prefab standard.
 
-Pour l'acteur : il n'a pas d'écran (game design intentionnel — il doit communiquer avec le réalisateur).
-
----
-
-## ÉTAPE 9 — Build Settings pour Meta Quest
-
-### Passer en Android
-1. **File → Build Settings**
-2. Plateforme → **Android** → **Switch Platform** (ça prend quelques minutes)
-
-### Player Settings
-3. Dans Build Settings → clique **Player Settings**
-4. Onglet **Android** :
-   - **Minimum API Level** : Android 10.0 (API level 29)
-   - **Target API Level** : Automatic
-   - **Scripting Backend** : IL2CPP
-   - **Target Architectures** : coche seulement **ARM64**
-5. **Other Settings → Color Space** : Linear (déjà en URP normalement)
-
-### Activer le mode VR Android
-6. **Edit → Project Settings → XR Plug-in Management → Android** : OpenXR doit être coché (fait à l'étape 2)
-
-### Configurer pour Meta Quest spécifiquement
-7. **Edit → Project Settings → OpenXR (Android)**
-8. Vérifie que **Meta Quest Support** est activé dans les features
-
-### Builder
-9. **File → Build Settings → Build**
-10. Connecte le Quest en USB → autorise le débogage sur le casque
-11. Ou : Build And Run pour installer directement
+Si la voix ne marche pas :
+- Vérifie que **VoIP Peer** est présent sur NetworkScene
+- Sur Quest : Menu Quest → Paramètres → autoriser le micro pour l'app
 
 ---
 
-## ÉTAPE 10 — Tester avec 2 Quests
+## ÉTAPE 8 — Build Android (Meta Quest)
 
-### Sur les 2 casques :
-- Les 2 doivent être sur le **même réseau WiFi**
-- Lance le jeu sur le Quest 1 → crée une room → note le Join Code
-- Lance sur le Quest 2 → rejoins avec le code
-
-### Si la connexion ne marche pas :
-- Vérifie que le serveur Ubiq `nexus.cs.ucl.ac.uk:8009` est accessible depuis le réseau
-- En fallback : **Solo** pour tester le gameplay seul
+1. **File → Build Settings → Android → Switch Platform**
+2. **Player Settings → Android :**
+   - Minimum API Level : Android 10 (API 29)
+   - Scripting Backend : IL2CPP
+   - Target Architectures : ARM64 uniquement
+3. **XR Plug-in Management → Android :** OpenXR coché
+4. **OpenXR → Features :** Meta Quest Support activé
+5. Brancher le Quest en USB → autoriser le débogage → **Build And Run**
 
 ---
 
-## Résumé des composants ajoutés par objet
+## ÉTAPE 9 — Tester à 2 Quests
+
+1. Les 2 Quests sur le **même WiFi**
+2. Quest 1 : lancer → viser le cube vert → trigger → **ACTEUR**
+3. Quest 2 : lancer → viser le cube bleu → trigger → **RÉALISATEUR**
+4. Quest 1 : dans UbiqSetup → **Créer une room** → noter le code
+5. Quest 2 : entrer le code → **Rejoindre**
+6. Vérifier : les avatars (tête + mains) sont visibles entre les 2 joueurs
+
+---
+
+## TABLEAU RÉCAP — Composants par objet
 
 | GameObject | Composants à ajouter |
 |---|---|
-| Player_Actor_XR | ActorControllerXR, LocomotionSystem, TeleportationProvider, SnapTurnProvider |
-| Player_Actor_XR → RightHand | XRActorInteractor |
-| Player_Director_XR | DirectorControllerXR, LocomotionSystem, SnapTurnProvider |
-| Player_Director_XR → RightHand | XRDirectorInteractor |
-| Sol (scène acteur) | TeleportationArea |
+| `Player_Actor_XR` | ActorControllerXR, PlayerSync, HeadAndHandsAvatarInputXRI, LocomotionSystem, TeleportationProvider, SnapTurnProvider |
+| `Player_Actor_XR → RightHand` | XRActorInteractor |
+| `Player_Director_XR` | DirectorControllerXR, PlayerSync, HeadAndHandsAvatarInputXRI, SnapTurnProvider |
+| `Player_Director_XR → RightHand` | XRDirectorInteractor |
+| `NetworkScene` | AvatarManager (avatarPrefab = Ubiq Floating Avatar) |
+| `GameManager` | VRRoleMenu |
+| Sol acteur | TeleportationArea |
 | Chaque bouton cabine | XRSimpleInteractable |
 | Chaque levier cabine | XRSimpleInteractable |
-| Tasse café, CD, musicbox | XRGrabInteractable + XRPickupHelper + NetworkObjectState |
+| `tasse café`, `CD` | XRGrabInteractable + XRPickupHelper + NetworkObjectState |
 
 ---
 
-## En cas de problème
+## DÉPANNAGE
 
-**"XRBaseInteractor introuvable" à la compilation :**
-→ Window → Package Manager → XR Interaction Toolkit → vérifier version (doit être 3.0+)
+**Avatar ne bouge pas :**
+→ AvatarManager.avatarPrefab assigné ? + les 2 joueurs dans la même room ?
 
-**Les mains ne bougent pas dans le casque :**
-→ Project Settings → XR Plug-in Management → OpenXR → vérifie les Interaction Profiles
+**HeadAndHandsAvatarInputXRI désactivé dans console :**
+→ Add Component → XR Input Modality Manager sur `Camera Offset`
 
-**La téléportation ne fonctionne pas :**
-→ Vérifie que TeleportationProvider est bien sur le même objet que LocomotionSystem
-→ Le sol doit avoir un Collider et un TeleportationArea
+**Le rôle ne se sélectionne pas en VR :**
+→ Vérifie que Player_Actor_XR et Player_Director_XR sont bien **SetActive false** au départ
 
-**Le réalisateur voit la scène acteur (mauvaise position) :**
-→ Vérifie que Player_Director_XR est bien positionné dans la cabine
+**Téléportation ne fonctionne pas :**
+→ Sol a un Collider + TeleportationArea + TeleportationProvider sur Player_Actor_XR ?
 
-**Ubiq ne synchro plus les positions :**
-→ Vérifie que PlayerSync / NetworkedPlayerSync est sur les 2 XROrigins
-→ Ou : réassigne le composant depuis Network Scene dans l'Inspector
+**Voix pas synchronisée :**
+→ VoipPeer sur NetworkScene + permission micro sur Quest autorisée
 
----
-
-## BONUS — Avatars Ubiq (requis pour l'examen)
-
-Ubiq fournit un avatar "tête + mains flottantes" prêt à l'emploi.
-
-### 1. Ajouter AvatarManager sur NetworkScene
-1. Dans la Hierarchy → trouve **NetworkScene** (le parent Ubiq)
-2. Clique dessus → **Add Component → Avatar Manager** (namespace Ubiq.Avatars)
-3. Dans **Avatar Prefab** → assigne le prefab : `Packages/Ubiq/Runtime/ExampleAvatars/Floating/Ubiq Floating Avatar`
-   - Via Project window : cherche "Ubiq Floating Avatar" dans la barre de recherche
-
-### 2. Ajouter l'input XRI pour les avatars
-Sur **chaque XR Rig** (Player_Actor_XR ET Player_Director_XR) :
-1. Clique sur le XR Origin parent
-2. **Add Component → Head And Hands Avatar Input XRI** (namespace Ubiq.XRI)
-3. Le champ **Avatar Manager** se remplit automatiquement (si pas : glisse le NetworkScene)
-4. Le champ **XR Origin Game Object** → glisse le XR Origin lui-même
-
-### 3. Vérifier le define symbol
-Le script `HeadAndHandsAvatarInputXRI` requiert `XRI_3_0_7_OR_NEWER` dans les defines.
-Unity le définit normalement automatiquement avec XRI 3.0.7.
-
-Pour vérifier/ajouter manuellement :
-- **Edit → Project Settings → Player → Other Settings → Scripting Define Symbols**
-- Ajoute `XRI_3_0_7_OR_NEWER` si absent
-
-### 4. Résultat attendu
-- Chaque joueur voit l'avatar de l'autre (tête + 2 mains) se déplacer en temps réel
-- L'avatar local est invisible pour soi-même (normal — c'est géré par AvatarLocalRemoteSwitcher)
-- La voix Ubiq (VoipPeer) ajoute l'indicateur de parole sur l'avatar automatiquement
-
-### Dépannage avatar
-**"HeadAndHandsAvatarInputXRI désactivé" dans la console :**
-→ Pas d'XRInputModalityManager enfant du XR Rig — Add Component → XR Input Modality Manager sur Camera Offset
-
-**L'avatar ne bouge pas :**
-→ Vérifie que AvatarManager.avatarPrefab est assigné
-→ Vérifie que les 2 clients sont dans la même room Ubiq
+**Objets (tasse, CD) toujours visibles côté réalisateur après pickup :**
+→ NetworkObjectState manquant sur l'objet
