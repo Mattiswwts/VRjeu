@@ -47,7 +47,14 @@ namespace ActionGame.Objects
             if (m_actorCam != null)
                 StartCoroutine(PickupRoutine());
             else
-                gameObject.SetActive(false); // VR : XRI gère la tenue, on cache juste
+                HideNetworked(); // VR : XRI gère la tenue, on cache juste
+        }
+
+        private void HideNetworked()
+        {
+            var netState = GetComponent<ActionGame.Networking.NetworkObjectState>();
+            if (netState != null) netState.SyncHide();
+            else                  gameObject.SetActive(false);
         }
 
         private IEnumerator PickupRoutine()
@@ -80,7 +87,7 @@ namespace ActionGame.Objects
                 yield return null;
             }
 
-            gameObject.SetActive(false);
+            HideNetworked();
         }
     }
 }

@@ -126,13 +126,16 @@ Les boutons du réalisateur et les leviers doivent être "sélectionnables" par 
 
 ## ÉTAPE 7 — Rendre les objets ramassables en VR
 
-Pour chaque objet que l'acteur doit prendre (tasse café, musicbox, etc.) :
+Pour chaque objet que l'acteur doit prendre (tasse café, CD, musicbox) :
 
 1. Clique sur l'objet
 2. **Add Component → XR Grab Interactable**
-3. **Add Component → XR Pickup Helper** (notre script)
-4. Sur XR Grab Interactable → décoche **Throw On Detach** (pour éviter que l'objet vole)
-5. Assure-toi que l'objet a un **Rigidbody** (XR Grab Interactable en ajoute un automatiquement)
+3. **Add Component → XR Pickup Helper** (notre script — envoie l'action réseau)
+4. **Add Component → Network Object State** (notre script — synchro la disparition chez le réalisateur)
+5. Sur XR Grab Interactable → décoche **Throw On Detach** (pour éviter que l'objet vole)
+6. Assure-toi que l'objet a un **Rigidbody** (XR Grab Interactable en ajoute un automatiquement)
+
+⚠️ Sans **Network Object State**, l'objet disparaît côté acteur mais reste visible côté réalisateur !
 
 ---
 
@@ -197,7 +200,7 @@ Pour l'acteur : il n'a pas d'écran (game design intentionnel — il doit commun
 | Sol (scène acteur) | TeleportationArea |
 | Chaque bouton cabine | XRSimpleInteractable |
 | Chaque levier cabine | XRSimpleInteractable |
-| Tasse café, musicbox, etc. | XRGrabInteractable + XRPickupHelper |
+| Tasse café, CD, musicbox | XRGrabInteractable + XRPickupHelper + NetworkObjectState |
 
 ---
 
@@ -219,3 +222,43 @@ Pour l'acteur : il n'a pas d'écran (game design intentionnel — il doit commun
 **Ubiq ne synchro plus les positions :**
 → Vérifie que PlayerSync / NetworkedPlayerSync est sur les 2 XROrigins
 → Ou : réassigne le composant depuis Network Scene dans l'Inspector
+
+---
+
+## BONUS — Avatars Ubiq (requis pour l'examen)
+
+Ubiq fournit un avatar "tête + mains flottantes" prêt à l'emploi.
+
+### 1. Ajouter AvatarManager sur NetworkScene
+1. Dans la Hierarchy → trouve **NetworkScene** (le parent Ubiq)
+2. Clique dessus → **Add Component → Avatar Manager** (namespace Ubiq.Avatars)
+3. Dans **Avatar Prefab** → assigne le prefab : `Packages/Ubiq/Runtime/ExampleAvatars/Floating/Ubiq Floating Avatar`
+   - Via Project window : cherche "Ubiq Floating Avatar" dans la barre de recherche
+
+### 2. Ajouter l'input XRI pour les avatars
+Sur **chaque XR Rig** (Player_Actor_XR ET Player_Director_XR) :
+1. Clique sur le XR Origin parent
+2. **Add Component → Head And Hands Avatar Input XRI** (namespace Ubiq.XRI)
+3. Le champ **Avatar Manager** se remplit automatiquement (si pas : glisse le NetworkScene)
+4. Le champ **XR Origin Game Object** → glisse le XR Origin lui-même
+
+### 3. Vérifier le define symbol
+Le script `HeadAndHandsAvatarInputXRI` requiert `XRI_3_0_7_OR_NEWER` dans les defines.
+Unity le définit normalement automatiquement avec XRI 3.0.7.
+
+Pour vérifier/ajouter manuellement :
+- **Edit → Project Settings → Player → Other Settings → Scripting Define Symbols**
+- Ajoute `XRI_3_0_7_OR_NEWER` si absent
+
+### 4. Résultat attendu
+- Chaque joueur voit l'avatar de l'autre (tête + 2 mains) se déplacer en temps réel
+- L'avatar local est invisible pour soi-même (normal — c'est géré par AvatarLocalRemoteSwitcher)
+- La voix Ubiq (VoipPeer) ajoute l'indicateur de parole sur l'avatar automatiquement
+
+### Dépannage avatar
+**"HeadAndHandsAvatarInputXRI désactivé" dans la console :**
+→ Pas d'XRInputModalityManager enfant du XR Rig — Add Component → XR Input Modality Manager sur Camera Offset
+
+**L'avatar ne bouge pas :**
+→ Vérifie que AvatarManager.avatarPrefab est assigné
+→ Vérifie que les 2 clients sont dans la même room Ubiq

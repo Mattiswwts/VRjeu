@@ -73,7 +73,11 @@ namespace ActionGame.Objects
         {
             m_isHeld = false;
             m_actor?.DropHeld();
-            gameObject.SetActive(false);
+
+            // Sync la disparition du CD vers les 2 clients
+            var netState = GetComponent<ActionGame.Networking.NetworkObjectState>();
+            if (netState != null) netState.SyncHide();
+            else                  gameObject.SetActive(false);
         }
     }
 }

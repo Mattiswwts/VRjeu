@@ -244,7 +244,10 @@ namespace ActionGame.GameLogic
             var step = m_steps[m_currentStep];
             Debug.Log($"[ScenarioManager] Étape {m_currentStep + 1}/{m_steps.Length} — '{step.actorInstruction}' | '{step.directorInstruction}'");
             OnActorInstructionChanged?.Invoke(step.actorInstruction);
-            OnDirectorInstructionChanged?.Invoke(step.directorInstruction);
+
+            // Préfixe "Étape X / Y" sur le prompteur du Réalisateur
+            string dirText = $"Étape {m_currentStep + 1} / {m_steps.Length}\n\n{step.directorInstruction}";
+            OnDirectorInstructionChanged?.Invoke(dirText);
             OnStepIndexChanged?.Invoke(m_currentStep);
         }
 
