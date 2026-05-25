@@ -63,8 +63,8 @@ namespace ActionGame.GameLogic
             },
             // 5 — Boîte à musique
             new ScenarioStep {
-                actorInstruction    = "Le personnage remarque quelque chose près de l'arbre...",
-                directorInstruction = "Il découvre la boîte à musique.\nQuand il la prend — déclenche la mélodie.",
+                actorInstruction    = "Le personnage remarque un CD sur la table... il le prend et l'insère dans la boîte à musique.",
+                directorInstruction = "Il insère le CD dans la boîte à musique.\nDéclenche la musique au moment où il l'insère.",
                 expectedActorAction    = "musicbox",
                 expectedDirectorEffect = "Music",
                 requiresSync = true
@@ -118,6 +118,20 @@ namespace ActionGame.GameLogic
         private bool  m_actorDone   = false;
         private bool  m_directorDone = false;
 
+#if UNITY_EDITOR
+        private void Update()
+        {
+            // F8 = forcer l'avancement d'une étape (debug uniquement)
+            if (UnityEngine.InputSystem.Keyboard.current != null &&
+                UnityEngine.InputSystem.Keyboard.current.f8Key.wasPressedThisFrame)
+            {
+                Debug.Log($"[ScenarioManager] 🐛 DEBUG — force étape suivante depuis {m_currentStep + 1}");
+                ResetStepState();
+                AdvanceStep();
+            }
+        }
+#endif
+
         private ScenarioStep CurrentStep => m_steps[m_currentStep];
 
         private void Start()
@@ -147,7 +161,8 @@ namespace ActionGame.GameLogic
         public void RegisterActorAction(string actionName)
         {
             if (m_currentStep >= m_steps.Length) return;
-            if (CurrentStep.expectedActorAction == "" || actionName != CurrentStep.expectedActorAction) return;
+            if (CurrentStep.expectedActorAction == "" ||
+                !string.Equals(actionName, CurrentStep.expectedActorAction, System.StringComparison.OrdinalIgnoreCase)) return;
 
             m_actorDone = true;
             m_actorTime = Time.time;
@@ -159,7 +174,8 @@ namespace ActionGame.GameLogic
         public void RegisterDirectorEffect(string effectName)
         {
             if (m_currentStep >= m_steps.Length) return;
-            if (CurrentStep.expectedDirectorEffect == "" || effectName != CurrentStep.expectedDirectorEffect) return;
+            if (CurrentStep.expectedDirectorEffect == "" ||
+                !string.Equals(effectName, CurrentStep.expectedDirectorEffect, System.StringComparison.OrdinalIgnoreCase)) return;
 
             m_directorDone = true;
             m_directorTime = Time.time;
