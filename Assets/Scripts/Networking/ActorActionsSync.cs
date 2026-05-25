@@ -19,13 +19,23 @@ namespace ActionGame.Networking
         {
             m_context = NetworkScene.Register(this);
 
-            var actor = FindFirstObjectByType<ActionGame.Player.ActorController>();
-            if (actor != null)
+            // Desktop
+            var actorDesktop = FindFirstObjectByType<ActionGame.Player.ActorController>();
+            if (actorDesktop != null)
             {
-                actor.OnActionExecuted.AddListener(SendAction);
-                Debug.Log("[ActorActionsSync] ✅ ActorController connecté");
+                actorDesktop.OnActionExecuted.AddListener(SendAction);
+                Debug.Log("[ActorActionsSync] ✅ ActorController (desktop) connecté");
             }
-            else
+
+            // VR
+            var actorXR = FindFirstObjectByType<ActionGame.Player.ActorControllerXR>();
+            if (actorXR != null)
+            {
+                actorXR.OnActionExecuted.AddListener(SendAction);
+                Debug.Log("[ActorActionsSync] ✅ ActorControllerXR (VR) connecté");
+            }
+
+            if (actorDesktop == null && actorXR == null)
                 Debug.Log("[ActorActionsSync] Pas d'ActorController local (normal côté Réalisateur)");
         }
 

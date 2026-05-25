@@ -29,16 +29,25 @@ namespace ActionGame.Objects
         public void Interact(ActorController actor)
         {
             if (m_pickedUp) return;
-            m_actor = actor;
-            m_actorCam = actor.GetComponentInChildren<Camera>();
-            m_pickedUp = true;
 
+            // En VR actor peut être null (XRPickupHelper gère l'action réseau)
+            if (actor != null)
+            {
+                m_actor    = actor;
+                m_actorCam = actor.GetComponentInChildren<Camera>();
+                actor.OnActionExecuted?.Invoke(gameObject.name);
+            }
+
+            m_pickedUp = true;
             foreach (var col in GetComponentsInChildren<Collider>())
                 col.enabled = false;
 
             Debug.Log($"[PickupItem] {gameObject.name} ramassé !");
-            actor.OnActionExecuted?.Invoke(gameObject.name);
-            StartCoroutine(PickupRoutine());
+
+            if (m_actorCam != null)
+                StartCoroutine(PickupRoutine());
+            else
+                gameObject.SetActive(false); // VR : XRI gère la tenue, on cache juste
         }
 
         private IEnumerator PickupRoutine()

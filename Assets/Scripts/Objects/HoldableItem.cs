@@ -28,16 +28,22 @@ namespace ActionGame.Objects
         public void Interact(ActorController actor)
         {
             if (m_isHeld) return;
-            m_actor = actor;
-            m_actorCam = actor.GetComponentInChildren<Camera>();
             m_isHeld = true;
 
             foreach (var col in GetComponentsInChildren<Collider>())
                 col.enabled = false;
 
-            m_actor.PickUp(gameObject.name);
             Debug.Log($"[HoldableItem] {gameObject.name} ramassé !");
-            StartCoroutine(MoveToHand());
+
+            // En VR actor peut être null (XRI gère la tenue physique)
+            if (actor != null)
+            {
+                m_actor    = actor;
+                m_actorCam = actor.GetComponentInChildren<Camera>();
+                m_actor.PickUp(gameObject.name);
+                StartCoroutine(MoveToHand());
+            }
+            // Sinon : XRGrabInteractable colle l'objet à la main automatiquement
         }
 
         private IEnumerator MoveToHand()

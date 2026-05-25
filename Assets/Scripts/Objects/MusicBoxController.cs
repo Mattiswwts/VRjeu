@@ -41,7 +41,10 @@ namespace ActionGame.Objects
         {
             var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
             if (effectsSync != null)
+            {
+                effectsSync.OnEffectReceived.RemoveListener(TriggerMusicBox);
                 effectsSync.OnEffectReceived.AddListener(TriggerMusicBox);
+            }
 
             m_actor = FindFirstObjectByType<ActorController>();
             if (m_actor != null)
@@ -63,17 +66,30 @@ namespace ActionGame.Objects
         {
             if (m_cdInserted) return;
 
-            if (actor.HeldItem != "CD")
+            // En VR (actor == null) ou sans CD en desktop : on accepte quand même
+            bool hasCD = actor != null && actor.HeldItem == "CD";
+            if (actor != null && !hasCD)
             {
                 Debug.Log("[MusicBoxController] Il faut d'abord récupérer le CD !");
                 return;
             }
 
             m_cdInserted = true;
-            var cd = FindFirstObjectByType<HoldableItem>();
-            cd?.Place();
-            Debug.Log("[MusicBoxController] CD inséré !");
-            FindFirstObjectByType<ActionGame.GameLogic.ScenarioManager>()?.RegisterActorAction(gameObject.name);
+
+            if (hasCD)
+            {
+                var cd = FindFirstObjectByType<HoldableItem>();
+                cd?.Place();
+            }
+
+            Debug.Log("[MusicBoxController] Boîte à musique activée !");
+
+            // Passe par ActorActionsSync pour synchroniser sur les 2 clients
+            var actorSync = FindFirstObjectByType<ActionGame.Networking.ActorActionsSync>();
+            if (actorSync != null)
+                actorSync.SendAction(gameObject.name);
+            else
+                FindFirstObjectByType<ActionGame.GameLogic.ScenarioManager>()?.RegisterActorAction(gameObject.name);
         }
 
         private void Update()

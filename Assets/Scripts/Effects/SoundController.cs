@@ -21,6 +21,17 @@ namespace ActionGame.Effects
                 m_audioSource = gameObject.AddComponent<AudioSource>();
         }
 
+        private void Start()
+        {
+            var effectsSync = FindFirstObjectByType<ActionGame.Networking.EffectsSync>();
+            if (effectsSync != null)
+            {
+                effectsSync.OnEffectReceived.RemoveListener(TriggerSound);
+                effectsSync.OnEffectReceived.AddListener(TriggerSound);
+                Debug.Log("[SoundController] ✅ Connecté à EffectsSync");
+            }
+        }
+
         /// <summary>Appelé par DirectorController via OnEffectTriggered.</summary>
         public void TriggerSound(string effectName)
         {
