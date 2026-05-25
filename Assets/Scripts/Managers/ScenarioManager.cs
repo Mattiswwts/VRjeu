@@ -108,6 +108,9 @@ namespace ActionGame.GameLogic
 
         public int StepCount => m_steps.Length;
 
+        // Appelé par HUDController après son abonnement pour afficher l'étape courante
+        public void RefreshHUD() => ShowCurrentStep();
+
         private int   m_currentStep = 0;
         private int   m_takeCount   = 0;
         private float m_actorTime   = -1f;

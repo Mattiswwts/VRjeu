@@ -54,10 +54,14 @@ namespace ActionGame.UI
             if (m_scenarioManager != null)
             {
                 m_totalSteps = m_scenarioManager.StepCount;
+                m_scenarioManager.OnActorInstructionChanged.AddListener(SetActorInstruction);
                 m_scenarioManager.OnDirectorInstructionChanged.AddListener(SetDirectorInstruction);
                 m_scenarioManager.OnStepIndexChanged.AddListener(UpdateStepCounter);
                 m_scenarioManager.OnSyncSuccess.AddListener(ShowSuccess);
                 m_scenarioManager.OnSyncFail.AddListener(ShowFail);
+
+                // ScenarioManager démarre peut-être avant nous → on force un refresh
+                m_scenarioManager.RefreshHUD();
             }
 
             SetFeedbackVisible(false);
@@ -67,6 +71,7 @@ namespace ActionGame.UI
         {
             if (m_scenarioManager != null)
             {
+                m_scenarioManager.OnActorInstructionChanged.RemoveListener(SetActorInstruction);
                 m_scenarioManager.OnDirectorInstructionChanged.RemoveListener(SetDirectorInstruction);
                 m_scenarioManager.OnStepIndexChanged.RemoveListener(UpdateStepCounter);
                 m_scenarioManager.OnSyncSuccess.RemoveListener(ShowSuccess);
