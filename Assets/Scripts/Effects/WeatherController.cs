@@ -8,10 +8,15 @@ namespace ActionGame.Effects
     /// </summary>
     public class WeatherController : MonoBehaviour
     {
-        [Header("Pluie")]
+        [Header("Pluie — Visuel")]
         [SerializeField] private ParticleSystem m_rainParticles;
 
+        [Header("Pluie — Son (optionnel)")]
+        [Tooltip("AudioSource avec le clip de pluie. Laisse vide si géré ailleurs.")]
+        [SerializeField] private AudioSource m_rainAudio;
+
         private bool m_isRaining = false;
+        private bool m_busy = false;
 
         private void Start()
         {
@@ -26,9 +31,10 @@ namespace ActionGame.Effects
             }
         }
 
-        private bool m_busy = false;
-
-        /// <summary>Appelé par EffectsSync via OnEffectReceived.</summary>
+        /// <summary>
+        /// Déclenché par le bouton "Weather" du Réalisateur.
+        /// Active/désactive les particules ET le son de pluie ensemble.
+        /// </summary>
         public void TriggerWeather(string effectName)
         {
             if (effectName != "Weather") return;
@@ -38,7 +44,7 @@ namespace ActionGame.Effects
 
             m_isRaining = !m_isRaining;
             SetRain(m_isRaining);
-            Debug.Log($"[WeatherController] {(m_isRaining ? "Pluie" : "Temps clair")}");
+            Debug.Log($"[WeatherController] {(m_isRaining ? "🌧 Pluie" : "☀ Temps clair")}");
         }
 
         private System.Collections.IEnumerator ResetBusy()
@@ -49,9 +55,19 @@ namespace ActionGame.Effects
 
         private void SetRain(bool active)
         {
-            if (m_rainParticles == null) return;
-            if (active) m_rainParticles.Play();
-            else m_rainParticles.Stop();
+            // Particules
+            if (m_rainParticles != null)
+            {
+                if (active) m_rainParticles.Play();
+                else        m_rainParticles.Stop();
+            }
+
+            // Son
+            if (m_rainAudio != null)
+            {
+                if (active) m_rainAudio.Play();
+                else        m_rainAudio.Stop();
+            }
         }
     }
 }
