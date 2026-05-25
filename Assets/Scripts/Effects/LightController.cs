@@ -25,20 +25,30 @@ namespace ActionGame.Effects
             }
         }
 
+        private bool m_busy = false;
+
         public void TriggerLight(string effectName)
         {
             if (effectName != "Light") return;
+            // Guard : ignore si déjà appelé ce frame (double-souscription Inspector+code)
+            if (m_busy) return;
+            m_busy = true;
+            StartCoroutine(ResetBusy());
 
             m_isOn = !m_isOn;
-
             foreach (var light in m_lights)
             {
                 if (light == null) continue;
                 light.color = Color.white;
                 light.enabled = m_isOn;
             }
-
             Debug.Log($"[LightController] Lumières {(m_isOn ? "allumées" : "éteintes")}");
+        }
+
+        private System.Collections.IEnumerator ResetBusy()
+        {
+            yield return null;
+            m_busy = false;
         }
     }
 }

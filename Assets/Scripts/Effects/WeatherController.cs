@@ -26,14 +26,25 @@ namespace ActionGame.Effects
             }
         }
 
+        private bool m_busy = false;
+
         /// <summary>Appelé par EffectsSync via OnEffectReceived.</summary>
         public void TriggerWeather(string effectName)
         {
             if (effectName != "Weather") return;
+            if (m_busy) return;
+            m_busy = true;
+            StartCoroutine(ResetBusy());
 
             m_isRaining = !m_isRaining;
             SetRain(m_isRaining);
-            Debug.Log($"[WeatherController] {(m_isRaining ? "🌧️ Pluie" : "☀️ Temps clair")}");
+            Debug.Log($"[WeatherController] {(m_isRaining ? "Pluie" : "Temps clair")}");
+        }
+
+        private System.Collections.IEnumerator ResetBusy()
+        {
+            yield return null;
+            m_busy = false;
         }
 
         private void SetRain(bool active)
