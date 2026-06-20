@@ -96,7 +96,7 @@ namespace ActionGame.GameLogic
         };
 
         [Header("Fenêtre de synchronisation (secondes)")]
-        [SerializeField] private float m_syncWindow = 2f;
+        [SerializeField] private float m_syncWindow = 5f;
 
         [Header("Événements")]
         public UnityEvent<string> OnActorInstructionChanged;
@@ -160,9 +160,18 @@ namespace ActionGame.GameLogic
         // Brancher sur : ActorController.OnActionExecuted + ScenarioTrigger (via code)
         public void RegisterActorAction(string actionName)
         {
+            Debug.Log($"[ScenarioManager] RegisterActorAction('{actionName}') — étape {m_currentStep + 1}, attendu='{CurrentStep.expectedActorAction}'");
             if (m_currentStep >= m_steps.Length) return;
-            if (CurrentStep.expectedActorAction == "" ||
-                !string.Equals(actionName, CurrentStep.expectedActorAction, System.StringComparison.OrdinalIgnoreCase)) return;
+            if (CurrentStep.expectedActorAction == "")
+            {
+                Debug.Log($"[ScenarioManager] ⚠️ Étape {m_currentStep + 1} n'attend pas d'action acteur");
+                return;
+            }
+            if (!string.Equals(actionName, CurrentStep.expectedActorAction, System.StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.Log($"[ScenarioManager] ⚠️ Action '{actionName}' ≠ attendu '{CurrentStep.expectedActorAction}'");
+                return;
+            }
 
             m_actorDone = true;
             m_actorTime = Time.time;
@@ -173,9 +182,18 @@ namespace ActionGame.GameLogic
         // Brancher sur : EffectsSync.OnEffectReceived
         public void RegisterDirectorEffect(string effectName)
         {
+            Debug.Log($"[ScenarioManager] RegisterDirectorEffect('{effectName}') — étape {m_currentStep + 1}, attendu='{CurrentStep.expectedDirectorEffect}'");
             if (m_currentStep >= m_steps.Length) return;
-            if (CurrentStep.expectedDirectorEffect == "" ||
-                !string.Equals(effectName, CurrentStep.expectedDirectorEffect, System.StringComparison.OrdinalIgnoreCase)) return;
+            if (CurrentStep.expectedDirectorEffect == "")
+            {
+                Debug.Log($"[ScenarioManager] ⚠️ Étape {m_currentStep + 1} n'attend pas d'effet réalisateur");
+                return;
+            }
+            if (!string.Equals(effectName, CurrentStep.expectedDirectorEffect, System.StringComparison.OrdinalIgnoreCase))
+            {
+                Debug.Log($"[ScenarioManager] ⚠️ Effet '{effectName}' ≠ attendu '{CurrentStep.expectedDirectorEffect}'");
+                return;
+            }
 
             m_directorDone = true;
             m_directorTime = Time.time;
@@ -227,6 +245,14 @@ namespace ActionGame.GameLogic
                     ResetStepState();
                 }
             }
+        }
+
+        /// <summary>Appeler depuis un bouton cheat en VR pour sauter l'étape en cours.</summary>
+        public void ForceNextStep()
+        {
+            Debug.Log($"[ScenarioManager] ⏭ CHEAT — force étape {m_currentStep + 1} → {m_currentStep + 2}");
+            ResetStepState();
+            AdvanceStep();
         }
 
         private void AdvanceStep()

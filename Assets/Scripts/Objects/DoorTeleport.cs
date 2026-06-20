@@ -1,4 +1,9 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using ActionGame.GameLogic;
 using ActionGame.Player;
 
@@ -6,8 +11,8 @@ namespace ActionGame.Objects
 {
     /// <summary>
     /// Pose ce script sur doorM et doorJ.
-    /// L'acteur clique sur la porte → téléportation + notification ScenarioManager.
-    /// Le GameObject doit avoir un Collider (non-trigger) pour que le raycast le détecte.
+    /// Desktop : clic souris → Interact(actor)
+    /// VR      : XRSimpleInteractable.selectEntered → InteractVR()
     /// </summary>
     public class DoorTeleport : MonoBehaviour, IInteractable
     {
@@ -20,6 +25,43 @@ namespace ActionGame.Objects
         private void Start()
         {
             m_scenarioManager = FindFirstObjectByType<ScenarioManager>();
+
+            // Branchement VR : écoute directement le XRSimpleInteractable
+            var xrInteractable = GetComponent<XRSimpleInteractable>();
+            if (xrInteractable != null)
+                xrInteractable.selectEntered.AddListener(_ => InteractVR());
+        }
+
+        // Appelé directement par XRSimpleInteractable en VR
+        private void InteractVR()
+        {
+            if (m_targetPoint == null) return;
+
+            var xrOrigin = FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>();
+            if (xrOrigin != null)
+            {
+                var cc = xrOrigin.GetComponent<CharacterController>();
+                if (cc != null) { cc.enabled = false; xrOrigin.transform.position = m_targetPoint.position; cc.enabled = true; }
+                else xrOrigin.transform.position = m_targetPoint.position;
+            }
+
+            Debug.Log($"[DoorTeleport] VR : téléporté via {gameObject.name}");
+            NotifyScenario();
+
+            // Relâche l'interacteur immédiatement (sinon la porte reste "tenue")
+            StartCoroutine(ReleaseNextFrame());
+        }
+
+        private IEnumerator ReleaseNextFrame()
+        {
+            yield return null;
+            var xri = GetComponent<XRSimpleInteractable>();
+            if (xri == null) yield break;
+            var manager = FindFirstObjectByType<XRInteractionManager>();
+            if (manager == null) yield break;
+            var selecting = new List<IXRSelectInteractor>(xri.interactorsSelecting);
+            foreach (var interactor in selecting)
+                manager.SelectExit(interactor, xri);
         }
 
         // ─── Clic souris (desktop) ───────────────────────────────────────────
@@ -33,12 +75,32 @@ namespace ActionGame.Objects
 
             if (actor != null)
             {
+                // Desktop — déplace le CharacterController
                 var cc = actor.GetComponent<CharacterController>();
                 if (cc != null)
                 {
                     cc.enabled = false;
                     cc.transform.position = m_targetPoint.position;
                     cc.enabled = true;
+                }
+            }
+            else
+            {
+                // VR — déplace le XR Origin
+                var xrOrigin = FindFirstObjectByType<Unity.XR.CoreUtils.XROrigin>();
+                if (xrOrigin != null)
+                {
+                    var cc = xrOrigin.GetComponent<CharacterController>();
+                    if (cc != null)
+                    {
+                        cc.enabled = false;
+                        xrOrigin.transform.position = m_targetPoint.position;
+                        cc.enabled = true;
+                    }
+                    else
+                    {
+                        xrOrigin.transform.position = m_targetPoint.position;
+                    }
                 }
             }
 
@@ -51,6 +113,8 @@ namespace ActionGame.Objects
         {
             bool isActor = other.GetComponent<ActorController>() != null
                         || other.GetComponentInParent<ActorController>() != null
+                        || other.GetComponent<ActorControllerXR>() != null
+                        || other.GetComponentInParent<ActorControllerXR>() != null
                         || other.CompareTag("Actor")
                         || other.transform.root.CompareTag("Actor");
             if (!isActor) return;

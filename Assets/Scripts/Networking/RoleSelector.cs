@@ -6,74 +6,87 @@ using ActionGame.Player;
 namespace ActionGame.Networking
 {
     /// <summary>
-    /// Sélection de rôle au démarrage — compatible Desktop ET VR.
+    /// Sélection de rôle — Desktop (F1/F2) et VR (cubes 3D via VRRoleMenu).
     ///
-    /// Desktop : F1 = Acteur, F2 = Réalisateur
-    /// VR      : 2 boutons 3D flottants (VRRoleMenu les crée automatiquement)
+    /// En VR : UN SEUL XR rig (Player_Actor_XR) utilisé pour les deux rôles.
+    /// On le téléporte au bon spawn et on swap les scripts — jamais de SetActive(false)
+    /// sur un rig actif pour éviter les crashes OpenXR.
     ///
     /// Setup Inspector :
-    ///   m_actorPlayer        → GameObject Player_Actor   (desktop)
-    ///   m_directorPlayer     → GameObject Player_Director (desktop)
-    ///   m_actorPlayerXR      → GameObject Player_Actor_XR (VR, XROrigin)
-    ///   m_directorPlayerXR   → GameObject Player_Director_XR (VR, XROrigin)
+    ///   m_actorPlayer    → Player_Actor    (desktop + spawn Actor en VR)
+    ///   m_directorPlayer → Player_Director (desktop + spawn Director en VR)
+    ///   m_actorPlayerXR  → Player_Actor_XR (le seul XR rig)
     ///
-    /// Tous ces GameObjects doivent être désactivés au départ (SetActive false).
+    /// Sur Player_Actor_XR il faut :
+    ///   - ActorControllerXR   (activé par défaut)
+    ///   - DirectorControllerXR (désactivé par défaut)
+    ///   - Sur Right Hand : XRActorInteractor   (activé)
+    ///                      XRDirectorInteractor (désactivé)
     /// </summary>
     public class RoleSelector : MonoBehaviour
     {
-        [Header("Joueurs Desktop")]
+        [Header("Joueurs Desktop (aussi utilisés comme spawn points VR)")]
         [SerializeField] private GameObject m_actorPlayer;
         [SerializeField] private GameObject m_directorPlayer;
 
-        [Header("Joueurs VR (XR Origin)")]
+        [Header("XR Rig unique")]
         [SerializeField] private GameObject m_actorPlayerXR;
-        [SerializeField] private GameObject m_directorPlayerXR;
+
 
         [Header("Événements")]
         public UnityEvent<bool> OnRoleSelected; // true = Acteur, false = Réalisateur
 
         public bool RoleSelected => m_roleSelected;
-
         private bool m_roleSelected = false;
+
+        private UbiqSetup m_ubiqSetup;
+
+        private bool UbiqReady =>
+            m_ubiqSetup == null || m_ubiqSetup.IsConnected;
 
         private void Start()
         {
             AutoFindPlayers();
+            m_ubiqSetup = FindFirstObjectByType<UbiqSetup>();
 
-            // Désactive tout au départ — RoleSelector active le bon au choix
-            SetActiveIfExists(m_actorPlayer, false);
-            SetActiveIfExists(m_directorPlayer, false);
-            SetActiveIfExists(m_actorPlayerXR, false);
-            SetActiveIfExists(m_directorPlayerXR, false);
+#if UNITY_EDITOR
+            // Editor : desktop actif, XR rig désactivé
+            if (m_actorPlayerXR != null) m_actorPlayerXR.SetActive(false);
+#else
+            // Quest : désactiver desktop, activer le XR rig dans le lobby
+            if (m_actorPlayer    != null) m_actorPlayer.SetActive(false);
+            if (m_directorPlayer != null) m_directorPlayer.SetActive(false);
+            if (m_actorPlayerXR  != null) m_actorPlayerXR.SetActive(true);
+
+            // Désactiver les contrôleurs de jeu — ils seront activés après la sélection
+            SetControllerActive(isActor: false, enable: false);
+            SetControllerActive(isActor: true,  enable: false);
+#endif
         }
 
         private void Update()
         {
             if (m_roleSelected) return;
-
+            if (!UbiqReady) return;          // attend la connexion Ubiq
             var kb = Keyboard.current;
             if (kb == null) return;
-
             if (kb.f1Key.wasPressedThisFrame) SelectRole(isActor: true);
             if (kb.f2Key.wasPressedThisFrame) SelectRole(isActor: false);
         }
 
-        // ─── API publique (appelée par VRRoleMenu) ────────────────────────────
+        // ─── API publique ─────────────────────────────────────────────────────
 
         public void SelectActor()    => SelectRole(isActor: true);
         public void SelectDirector() => SelectRole(isActor: false);
-
-        // ─── Logique principale ───────────────────────────────────────────────
 
         public void SelectRole(bool isActor)
         {
             if (m_roleSelected) return;
             m_roleSelected = true;
 
-            bool useVR = IsVRActive();
-            Debug.Log($"[RoleSelector] Rôle : {(isActor ? "ACTEUR" : "RÉALISATEUR")} | Mode : {(useVR ? "VR" : "Desktop")}");
+            Debug.Log($"[RoleSelector] Rôle : {(isActor ? "ACTEUR" : "RÉALISATEUR")} | VR : {IsVRActive()}");
 
-            if (useVR)
+            if (IsVRActive())
                 SetupVR(isActor);
             else
                 SetupDesktop(isActor);
@@ -81,28 +94,59 @@ namespace ActionGame.Networking
             OnRoleSelected?.Invoke(isActor);
         }
 
+        // ─── Setup VR ─────────────────────────────────────────────────────────
+
+        private void SetupVR(bool isActor)
+        {
+            if (m_actorPlayerXR == null)
+            {
+                Debug.LogError("[RoleSelector] Player_Actor_XR introuvable !");
+                return;
+            }
+
+            // 1. Téléporter le rig au bon spawn
+            //    On réutilise la position du joueur desktop comme point d'arrivée
+            GameObject spawnRef = isActor ? m_actorPlayer : m_directorPlayer;
+            if (spawnRef != null)
+            {
+                Vector3 target = spawnRef.transform.position;
+                var cc = m_actorPlayerXR.GetComponent<CharacterController>();
+                if (cc != null) { cc.enabled = false; m_actorPlayerXR.transform.position = target; cc.enabled = true; }
+                else m_actorPlayerXR.transform.position = target;
+            }
+
+            // 2. Activer les bons scripts de contrôle
+            SetControllerActive(isActor: true,  enable: isActor);
+            SetControllerActive(isActor: false, enable: !isActor);
+
+            // 3. PlayerSync — non utilisé en VR (avatars Ubiq gèrent la visualisation distante)
+
+            // 4. Avatar Ubiq
+            var avatar = m_actorPlayerXR.GetComponentInChildren<Ubiq.XRI.HeadAndHandsAvatarInputXRI>(true);
+            if (avatar != null) avatar.enabled = true;
+
+            // 5. Caméra taguée MainCamera
+            var cam = m_actorPlayerXR.GetComponentInChildren<Camera>();
+            if (cam != null) cam.tag = "MainCamera";
+
+            Debug.Log($"[RoleSelector] VR prêt — {(isActor ? "ACTEUR" : "RÉALISATEUR")}");
+        }
+
         // ─── Setup Desktop ────────────────────────────────────────────────────
 
         private void SetupDesktop(bool isActor)
         {
-            SetActiveIfExists(m_actorPlayer,    isActor);
-            SetActiveIfExists(m_directorPlayer, !isActor);
+            if (m_actorPlayer    != null) m_actorPlayer.SetActive(isActor);
+            if (m_directorPlayer != null) m_directorPlayer.SetActive(!isActor);
 
-            if (m_actorPlayer != null)
-            {
-                m_actorPlayer.GetComponent<PlayerSync>()?.SetLocal(isActor);
-                var ctrl = m_actorPlayer.GetComponent<ActorController>();
-                if (ctrl != null) ctrl.enabled = isActor;
-            }
+            m_actorPlayer   ?.GetComponent<PlayerSync>()?.SetLocal(isActor);
+            m_directorPlayer?.GetComponent<PlayerSync>()?.SetLocal(!isActor);
 
-            if (m_directorPlayer != null)
-            {
-                m_directorPlayer.GetComponent<PlayerSync>()?.SetLocal(!isActor);
-                var ctrl = m_directorPlayer.GetComponent<DirectorController>();
-                if (ctrl != null) ctrl.enabled = !isActor;
-            }
+            var actorCtrl    = m_actorPlayer   ?.GetComponent<ActorController>();
+            var directorCtrl = m_directorPlayer?.GetComponent<DirectorController>();
+            if (actorCtrl    != null) actorCtrl.enabled    = isActor;
+            if (directorCtrl != null) directorCtrl.enabled = !isActor;
 
-            // Camera locale plein écran, camera distante désactivée
             SetupCameras(
                 localPlayer:  isActor ? m_actorPlayer  : m_directorPlayer,
                 remotePlayer: isActor ? m_directorPlayer : m_actorPlayer
@@ -112,134 +156,82 @@ namespace ActionGame.Networking
             Cursor.visible   = false;
         }
 
-        // ─── Setup VR ─────────────────────────────────────────────────────────
-
-        private void SetupVR(bool isActor)
-        {
-            GameObject localXR  = isActor ? m_actorPlayerXR    : m_directorPlayerXR;
-            GameObject remoteXR = isActor ? m_directorPlayerXR : m_actorPlayerXR;
-
-            // Active le bon XR Rig
-            SetActiveIfExists(localXR,  true);
-            SetActiveIfExists(remoteXR, false); // l'autre joueur est sur son propre Quest
-
-            if (localXR == null)
-            {
-                Debug.LogError("[RoleSelector] XR Rig local introuvable ! Vérifie les références dans l'Inspector.");
-                return;
-            }
-
-            // PlayerSync — marque le local
-            localXR.GetComponent<PlayerSync>()?.SetLocal(true);
-
-            // Contrôleurs XR — active le bon
-            var actorXR    = m_actorPlayerXR   ?.GetComponent<ActorControllerXR>();
-            var directorXR = m_directorPlayerXR?.GetComponent<DirectorControllerXR>();
-            if (actorXR    != null) actorXR.enabled    = isActor;
-            if (directorXR != null) directorXR.enabled = !isActor;
-
-            // Avatar Ubiq — active HeadAndHandsAvatarInputXRI uniquement sur le rig local
-            SetAvatarInput(m_actorPlayerXR,    isActor);
-            SetAvatarInput(m_directorPlayerXR, !isActor);
-
-            // Tag MainCamera sur la caméra XR locale (requis par Ubiq VoIP)
-            var xrCam = localXR.GetComponentInChildren<Camera>();
-            if (xrCam != null) xrCam.tag = "MainCamera";
-        }
-
         // ─── Helpers ──────────────────────────────────────────────────────────
 
-        private static bool IsVRActive()
+        private void SetControllerActive(bool isActor, bool enable)
         {
-#if UNITY_EDITOR
-            return UnityEngine.XR.XRSettings.isDeviceActive;
-#else
-            return true; // Sur Quest, toujours en VR
-#endif
+            if (m_actorPlayerXR == null) return;
+
+            if (isActor)
+            {
+                var c = m_actorPlayerXR.GetComponentInChildren<ActorControllerXR>(true);
+                if (c != null) c.enabled = enable;
+                var i = m_actorPlayerXR.GetComponentInChildren<XRActorInteractor>(true);
+                if (i != null) i.enabled = enable;
+            }
+            else
+            {
+                var c = m_actorPlayerXR.GetComponentInChildren<DirectorControllerXR>(true);
+                if (c != null) c.enabled = enable;
+                var i = m_actorPlayerXR.GetComponentInChildren<XRDirectorInteractor>(true);
+                if (i != null) i.enabled = enable;
+            }
         }
 
-        private static void SetAvatarInput(GameObject xrRig, bool active)
-        {
-            if (xrRig == null) return;
-            // HeadAndHandsAvatarInputXRI est dans le namespace Ubiq.XRI
-            var input = xrRig.GetComponentInChildren<Ubiq.XRI.HeadAndHandsAvatarInputXRI>(includeInactive: true);
-            if (input != null) input.enabled = active;
-        }
+        private static bool IsVRActive() => XRCheck.IsVR();
 
         private static void SetupCameras(GameObject localPlayer, GameObject remotePlayer)
         {
             if (remotePlayer != null)
             {
-                var remoteCam = remotePlayer.GetComponentInChildren<Camera>();
-                if (remoteCam != null)
+                var cam = remotePlayer.GetComponentInChildren<Camera>();
+                if (cam != null)
                 {
-                    var listener = remoteCam.GetComponent<AudioListener>();
+                    var listener = cam.GetComponent<AudioListener>();
                     if (listener != null) listener.enabled = false;
-                    remoteCam.gameObject.SetActive(false);
+                    cam.gameObject.SetActive(false);
                 }
             }
-
             if (localPlayer != null)
             {
-                var localCam = localPlayer.GetComponentInChildren<Camera>();
-                if (localCam != null)
-                {
-                    localCam.rect = new Rect(0, 0, 1, 1);
-                    localCam.tag  = "MainCamera";
-                }
+                var cam = localPlayer.GetComponentInChildren<Camera>();
+                if (cam != null) { cam.rect = new Rect(0, 0, 1, 1); cam.tag = "MainCamera"; }
             }
-        }
-
-        private static void SetActiveIfExists(GameObject go, bool active)
-        {
-            if (go != null) go.SetActive(active);
         }
 
         private void AutoFindPlayers()
         {
             if (m_actorPlayer == null)
-            {
-                var c = FindFirstObjectByType<ActorController>();
-                if (c != null) m_actorPlayer = c.gameObject;
-            }
+            { var c = FindFirstObjectByType<ActorController>(); if (c) m_actorPlayer = c.gameObject; }
+
             if (m_directorPlayer == null)
-            {
-                var c = FindFirstObjectByType<DirectorController>();
-                if (c != null) m_directorPlayer = c.gameObject;
-            }
+            { var c = FindFirstObjectByType<DirectorController>(); if (c) m_directorPlayer = c.gameObject; }
+
             if (m_actorPlayerXR == null)
-            {
-                var c = FindFirstObjectByType<ActorControllerXR>();
-                if (c != null) m_actorPlayerXR = c.gameObject;
-            }
-            if (m_directorPlayerXR == null)
-            {
-                var c = FindFirstObjectByType<DirectorControllerXR>();
-                if (c != null) m_directorPlayerXR = c.gameObject;
-            }
+            { var c = FindFirstObjectByType<ActorControllerXR>(); if (c) m_actorPlayerXR = c.gameObject; }
         }
 
-        // ─── UI Desktop (inchangée) ───────────────────────────────────────────
+        // ─── UI Desktop ───────────────────────────────────────────────────────
 
         private void OnGUI()
         {
             if (m_roleSelected) return;
-            if (IsVRActive()) return; // VRRoleMenu gère l'UI en VR
+            if (IsVRActive()) return;
+            if (!UbiqReady) return;          // attend la connexion Ubiq
 
             float w = 400f, h = 180f;
             float x = (Screen.width  - w) / 2f;
             float y = (Screen.height - h) / 2f;
 
             GUI.Box(new Rect(x, y, w, h), "");
+            GUIStyle title = new GUIStyle(GUI.skin.label)  { fontSize = 22, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
+            GUIStyle btn   = new GUIStyle(GUI.skin.button) { fontSize = 18 };
+            GUIStyle hint  = new GUIStyle(GUI.skin.label)  { fontSize = 13, alignment = TextAnchor.MiddleCenter };
 
-            GUIStyle titleStyle = new GUIStyle(GUI.skin.label)  { fontSize = 22, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-            GUIStyle btnStyle   = new GUIStyle(GUI.skin.button) { fontSize = 18 };
-            GUIStyle hintStyle  = new GUIStyle(GUI.skin.label)  { fontSize = 13, alignment = TextAnchor.MiddleCenter };
-
-            GUI.Label(new Rect(x,       y + 10,  w,   40), "Choisir votre rôle", titleStyle);
-            if (GUI.Button(new Rect(x + 30,  y + 65, 160, 50), "F1 — Acteur",      btnStyle)) SelectRole(isActor: true);
-            if (GUI.Button(new Rect(x + 210, y + 65, 160, 50), "F2 — Réalisateur", btnStyle)) SelectRole(isActor: false);
-            GUI.Label(new Rect(x, y + 130, w, 30), "Ou appuyez sur F1 / F2", hintStyle);
+            GUI.Label(new Rect(x,       y + 10,  w,   40), "Choisir votre rôle", title);
+            if (GUI.Button(new Rect(x + 30,  y + 65, 160, 50), "F1 — Acteur",      btn)) SelectRole(isActor: true);
+            if (GUI.Button(new Rect(x + 210, y + 65, 160, 50), "F2 — Réalisateur", btn)) SelectRole(isActor: false);
+            GUI.Label(new Rect(x, y + 130, w, 30), "Ou appuyez sur F1 / F2", hint);
         }
     }
 }

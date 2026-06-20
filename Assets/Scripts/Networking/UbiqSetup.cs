@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using Ubiq.Rooms;
 using Ubiq.Messaging;
@@ -7,19 +8,21 @@ namespace ActionGame.Networking
 {
     public class UbiqSetup : MonoBehaviour
     {
-        private RoomClient m_roomClient;
+        [Header("Serveur Ubiq")]
+        [SerializeField] private string m_server = "nexus.cs.ucl.ac.uk:8009";
 
-        private string m_serverInput   = "nexus.cs.ucl.ac.uk:8009";
-        private string m_joinCodeInput = "";
-        private string m_displayedCode = "";
-        private bool   m_isConnected   = false;
-        private bool   m_isSolo        = false;
-        private bool   m_joining       = false;
-        private float  m_joinStartTime = 0f;
-        private const float JOIN_TIMEOUT = 8f;
+        public event System.Action<string>        OnConnected;
+        public event System.Action<string, Color> OnStatusChanged;
 
-        private string m_statusMsg   = "";
-        private Color  m_statusColor = Color.white;
+        private RoomClient           m_roomClient;
+        private ConnectionDefinition m_connectionDef;
+        private bool                 m_isConnected = false;
+        private bool                 m_isSolo      = false;
+        private bool                 m_joining     = false;
+        private float                m_joinStartTime;
+        private const float          JOIN_TIMEOUT  = 15f;
+
+        public bool IsConnected => m_isConnected || m_isSolo;
 
         private void Start()
         {
@@ -37,12 +40,11 @@ namespace ActionGame.Networking
             if (m_roomClient != null)
             {
                 m_roomClient.OnJoinedRoom.AddListener(OnJoinedRoom);
-                m_roomClient.OnPeerAdded.AddListener(p   => Debug.Log($"[UbiqSetup] Peer connecté : {p.uuid}"));
-                m_roomClient.OnPeerRemoved.AddListener(p => Debug.Log($"[UbiqSetup] Peer déconnecté : {p.uuid}"));
+                m_roomClient.OnPeerAdded.AddListener(p => Debug.Log($"[UbiqSetup] Peer : {p.uuid}"));
             }
             else
             {
-                Debug.LogWarning("[UbiqSetup] RoomClient introuvable — Solo uniquement.");
+                OnStatusChanged?.Invoke("RoomClient introuvable.", Color.red);
             }
         }
 
@@ -52,129 +54,77 @@ namespace ActionGame.Networking
             if (Time.time - m_joinStartTime > JOIN_TIMEOUT)
             {
                 m_joining = false;
-                SetStatus($"Impossible de joindre {m_serverInput}\nVérifie l'IP ou ta connexion.", Color.yellow);
+                OnStatusChanged?.Invoke("Timeout — vérifie ta connexion.", Color.yellow);
             }
         }
 
-        private void ConnectAndJoin(bool createNew)
+        public void CreateRoom()
         {
-            if (m_roomClient == null) return;
-
-            m_joining       = true;
-            m_joinStartTime = Time.time;
-            SetStatus("", Color.white);
-
-            // Force la connexion au serveur spécifié
-            var parts = m_serverInput.Trim().Split(':');
-            if (parts.Length != 2 || !int.TryParse(parts[1], out _))
+            if (!Connect()) return;
+            StartCoroutine(DoAfter(0.6f, () =>
             {
-                SetStatus("Format invalide — utilise : ip:port  (ex: nexus.cs.ucl.ac.uk:8009)", Color.red);
-                m_joining = false;
-                return;
+                OnStatusChanged?.Invoke("Création de la room...", Color.cyan);
+                m_roomClient.Join("VRMirrorWorld", publish: true);
+            }));
+        }
+
+        public void JoinWithCode(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) { OnStatusChanged?.Invoke("Code vide.", Color.yellow); return; }
+            if (!Connect()) return;
+            StartCoroutine(DoAfter(0.6f, () =>
+            {
+                OnStatusChanged?.Invoke($"Connexion avec {code}...", Color.cyan);
+                m_roomClient.Join(code.Trim());
+            }));
+        }
+
+        public void SetSolo()
+        {
+            m_isSolo = true; m_isConnected = true; m_joining = false;
+            OnConnected?.Invoke("");
+        }
+
+        private IEnumerator DoAfter(float t, System.Action action)
+        {
+            yield return new WaitForSeconds(t);
+            action();
+        }
+
+        private bool Connect()
+        {
+            if (m_roomClient == null) { OnStatusChanged?.Invoke("RoomClient introuvable !", Color.red); return false; }
+            if (m_joining) return true;
+
+            m_joining = true;
+            m_joinStartTime = Time.time;
+            OnStatusChanged?.Invoke("Connexion...", Color.cyan);
+
+            var parts = m_server.Trim().Split(':');
+            if (parts.Length != 2 || !int.TryParse(parts[1], out int port))
+            {
+                OnStatusChanged?.Invoke("Serveur invalide.", Color.red);
+                m_joining = false; return false;
             }
 
-            var def = ScriptableObject.CreateInstance<ConnectionDefinition>();
-            def.sendToIp   = parts[0];
-            def.sendToPort = parts[1];
-            def.type       = ConnectionType.TcpClient;
-            m_roomClient.Connect(def);
+            string ip = parts[0];
 
-            if (createNew)
-                m_roomClient.Join("ActionGame-Room", publish: true);
-            else
-                m_roomClient.Join(m_joinCodeInput.Trim());
+            m_connectionDef            = ScriptableObject.CreateInstance<ConnectionDefinition>();
+            m_connectionDef.sendToIp   = ip;
+            m_connectionDef.sendToPort = port.ToString();
+            m_connectionDef.type       = ConnectionType.TcpClient;
+            Debug.Log($"[UbiqSetup] TCP → {ip}:{port}");
+            m_roomClient.Connect(m_connectionDef);
+            return true;
         }
 
         private void OnJoinedRoom(IRoom room)
         {
             if (string.IsNullOrEmpty(room.UUID)) return;
-            m_joining       = false;
-            m_displayedCode = room.JoinCode;
-            m_isConnected   = true;
-            SetStatus("", Color.white);
-            Debug.Log($"[UbiqSetup] Connecté ! Join code : {room.JoinCode}");
-        }
-
-        private void SetStatus(string msg, Color color)
-        {
-            m_statusMsg   = msg;
-            m_statusColor = color;
-        }
-
-        public RoomClient RoomClient  => m_roomClient;
-        public bool       IsConnected => m_isConnected || m_isSolo;
-
-        private void OnGUI()
-        {
-            if (m_isSolo) return;
-
-            if (m_isConnected)
-            {
-                GUI.Box(new Rect(10, 10, 340, 35), "");
-                GUI.Label(new Rect(20, 18, 330, 25), $"Join Code : {m_displayedCode}");
-                return;
-            }
-
-            float w = 440f, h = 300f;
-            float x = (Screen.width  - w) / 2f;
-            float y = (Screen.height - h) / 2f;
-
-            GUI.Box(new Rect(x, y, w, h), "");
-
-            GUIStyle title = new GUIStyle(GUI.skin.label)  { fontSize = 20, alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold };
-            GUIStyle btn   = new GUIStyle(GUI.skin.button) { fontSize = 15 };
-            GUIStyle lbl   = new GUIStyle(GUI.skin.label)  { fontSize = 13 };
-
-            GUI.Label(new Rect(x, y + 10, w, 35), "Connexion réseau", title);
-
-            // Serveur
-            GUI.Label(new Rect(x + 20, y + 55, 80, 25), "Serveur :", lbl);
-            m_serverInput = GUI.TextField(new Rect(x + 105, y + 53, 315, 26), m_serverInput);
-
-            if (m_roomClient == null)
-            {
-                GUIStyle err = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = Color.red }, alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(x, y + 90, w, 50), "NetworkScene/RoomClient introuvable !\nAjoute le prefab Ubiq NetworkScene dans la hiérarchie.", err);
-                DrawSoloButton(x, y + 250, w, btn);
-                return;
-            }
-
-            // Créer une room
-            GUI.enabled = !m_joining;
-            if (GUI.Button(new Rect(x + 20, y + 100, 400, 40), m_joining ? "Connexion en cours..." : "Créer une room (Hôte)", btn))
-                ConnectAndJoin(createNew: true);
-            GUI.enabled = true;
-
-            // Rejoindre
-            GUI.Label(new Rect(x + 20, y + 158, 80, 25), "Join code :", lbl);
-            m_joinCodeInput = GUI.TextField(new Rect(x + 105, y + 156, 200, 26), m_joinCodeInput);
-            GUI.enabled = !m_joining;
-            if (GUI.Button(new Rect(x + 315, y + 155, 105, 30), "Rejoindre", btn))
-            {
-                if (!string.IsNullOrEmpty(m_joinCodeInput))
-                    ConnectAndJoin(createNew: false);
-            }
-            GUI.enabled = true;
-
-            // Status
-            if (!string.IsNullOrEmpty(m_statusMsg))
-            {
-                GUIStyle status = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter, normal = { textColor = m_statusColor }, wordWrap = true };
-                GUI.Label(new Rect(x + 10, y + 200, w - 20, 45), m_statusMsg, status);
-            }
-
-            DrawSoloButton(x, y + 255, w, btn);
-        }
-
-        private void DrawSoloButton(float x, float y, float w, GUIStyle btn)
-        {
-            GUIStyle solo = new GUIStyle(btn) { fontSize = 12, normal = { textColor = Color.yellow } };
-            if (GUI.Button(new Rect(x + 110, y, 220, 28), "Solo (test sans réseau)", solo))
-            {
-                m_isSolo      = true;
-                m_isConnected = true;
-                m_joining     = false;
-            }
+            m_joining = false; m_isConnected = true;
+            Debug.Log($"[UbiqSetup] ✅ {room.Name} — code : {room.JoinCode}");
+            OnStatusChanged?.Invoke("", Color.white);
+            OnConnected?.Invoke(room.JoinCode);
         }
     }
 }

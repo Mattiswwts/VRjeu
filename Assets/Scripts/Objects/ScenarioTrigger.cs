@@ -26,14 +26,21 @@ namespace ActionGame.Objects
 
         private void OnTriggerEnter(Collider other)
         {
-            // Accepte l'Acteur desktop (ActorController) ou VR (tag "Actor")
+            // Accepte l'Acteur desktop (ActorController), VR (ActorControllerXR) ou tag "Actor"
             bool isActor = other.GetComponent<ActorController>() != null
                         || other.GetComponentInParent<ActorController>() != null
+                        || other.GetComponent<ActionGame.Player.ActorControllerXR>() != null
+                        || other.GetComponentInParent<ActionGame.Player.ActorControllerXR>() != null
                         || other.CompareTag("Actor")
                         || other.transform.root.CompareTag("Actor");
-            if (!isActor) return;
 
-            Debug.Log($"[ScenarioTrigger] Zone '{m_zoneName}' atteinte");
+            if (!isActor)
+            {
+                Debug.Log($"[ScenarioTrigger] Collision ignorée sur '{m_zoneName}' — objet : {other.name} (tag:{other.tag})");
+                return;
+            }
+
+            Debug.Log($"[ScenarioTrigger] ✅ Zone '{m_zoneName}' atteinte par {other.name}");
 
             // Passe par ActorActionsSync pour synchroniser sur le réseau
             var actorSync = FindFirstObjectByType<ActionGame.Networking.ActorActionsSync>();

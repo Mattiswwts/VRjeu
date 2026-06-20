@@ -27,8 +27,8 @@ namespace ActionGame.Networking
                 Debug.Log("[ActorActionsSync] ✅ ActorController (desktop) connecté");
             }
 
-            // VR
-            var actorXR = FindFirstObjectByType<ActionGame.Player.ActorControllerXR>();
+            // VR — cherche même si le composant est désactivé (activé après sélection de rôle)
+            var actorXR = FindFirstObjectByType<ActionGame.Player.ActorControllerXR>(FindObjectsInactive.Include);
             if (actorXR != null)
             {
                 actorXR.OnActionExecuted.AddListener(SendAction);
